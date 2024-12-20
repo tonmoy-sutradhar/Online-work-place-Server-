@@ -86,6 +86,16 @@ async function run() {
     // 1. Add a Bids data in DB (POST)
     app.post("/add-bid", async (req, res) => {
       const bidData = req.body;
+
+      // if a user placed a bid already in this job
+      const query = { email: bidData.email, jobId: bidData.jobId };
+      const alreadyExist = await bidsCollection.findOne(query);
+      if (alreadyExist) {
+        return res
+          .status(400)
+          .send("You have already placed a bid on this job");
+      }
+      console.log("Already exist --> ", alreadyExist);
       const result = await bidsCollection.insertOne(bidData);
 
       // Increase bid count in jobs Collection
