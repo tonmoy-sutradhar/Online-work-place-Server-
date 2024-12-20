@@ -24,7 +24,12 @@ async function run() {
   try {
     await client.connect();
 
+    // <<---------------------------------------------------------------------------------------------------------------->>
+
     const jobsCollection = client.db("Online-Market").collection("jobs");
+    const bidsCollection = client.db("Online-Market").collection("bids");
+
+    // All Jobs related Data----------->>
 
     // 2. Get all jobs from DB
     app.get("/jobs", async (req, res) => {
@@ -75,6 +80,25 @@ async function run() {
       const result = await jobsCollection.deleteOne(query);
       res.send(result);
     });
+
+    // All Bids related Data ----------------------->>
+
+    // 1. Add a Bids data in DB (POST)
+    app.post("/add-bid", async (req, res) => {
+      const bidData = req.body;
+      const result = await bidsCollection.insertOne(bidData);
+
+      // Increase bid count in jobs Collection
+      const filter = { _id: new ObjectId(bidData.jobId) };
+      const update = {
+        $inc: { bid_count: 1 },
+      };
+      const updateBidCount = await jobsCollection.updateOne(filter, update);
+
+      res.send(result);
+    });
+
+    // <<---------------------------------------------------MongoDB_Connection-------------------------------------------------------->>
 
     await client.db("admin").command({ ping: 1 });
     console.log(
