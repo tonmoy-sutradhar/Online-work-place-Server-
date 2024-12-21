@@ -4,10 +4,17 @@ require("dotenv").config();
 const app = express();
 const cors = require("cors");
 const port = process.env.PORT || 5000;
+var jwt = require("jsonwebtoken");
 
 // Middleware
+const corsOptions = {
+  origin: ["http://localhost:5173"],
+  Credential: true,
+  optionalSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
-app.use(cors());
 
 // Mongodb Connect
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.cjt8m.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -28,6 +35,33 @@ async function run() {
 
     const jobsCollection = client.db("Online-Market").collection("jobs");
     const bidsCollection = client.db("Online-Market").collection("bids");
+
+    // Json web token(JWT) Apply -->>
+    app.post("/jwt", async (req, res) => {
+      const email = req.body;
+
+      // create token
+      const token = jwt.sign(email, process.env.SECRETE_KEY, {
+        expiresIn: "5d",
+      });
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({ success: true });
+      console.log(token);
+    });
+
+    // Logout || clear cookie form browser
+    app.get("/logout", async (req, res) => {
+      res.clearCookie("token", {
+        maxAge: 0,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      });
+    });
 
     // Jobs related Data----------->>
 
