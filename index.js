@@ -5,16 +5,18 @@ const app = express();
 const cors = require("cors");
 const port = process.env.PORT || 5000;
 var jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 
 // Middleware
 const corsOptions = {
-  origin: ["http://localhost:5173"],
-  Credential: true,
+  origin: "http://localhost:5173",
+  credentials: true,
   optionalSuccessStatus: 200,
 };
 
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(cookieParser());
 
 // Mongodb Connect
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.cjt8m.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -26,6 +28,23 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+// Verify Token
+const verifyToken = async (req, res, next) => {
+  const token = req.cookies?.token;
+  if (!token) return res.status(401).send({ message: "Unauthorize Access." });
+  jwt.verify(token, process.env.SECRETE_KEY, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "Unauthorize Access." });
+    }
+
+    // ekhane user ta new create , age theke chilo na
+    req.user = decoded;
+  });
+  // console.log(token);
+
+  next();
+};
 
 async function run() {
   try {
@@ -42,7 +61,7 @@ async function run() {
 
       // create token
       const token = jwt.sign(email, process.env.SECRETE_KEY, {
-        expiresIn: "5d",
+        expiresIn: "5h",
       });
       res
         .cookie("token", token, {
@@ -50,6 +69,7 @@ async function run() {
           secure: process.env.NODE_ENV === "production",
           sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
         })
+        .status(200)
         .send({ success: true });
       console.log(token);
     });
@@ -191,11 +211,19 @@ async function run() {
 
     // Get all dibs for specific user data form DB
     app.get("/bids/:email", async (req, res) => {
+      const decodeEmail = req.user?.email;
       const email = req.params.email;
       const query = { email };
       const result = await bidsCollection.find(query).toArray();
       res.send(result);
+
+      // if (decodeEmail !== email) {
+      //   return res.status(401).send({ message: "Unauthorize Access." });
+      // }
+      // console.log(decodeEmail);
+      // console.log(email);
     });
+
     // {
     //   const isBuyer = req.query.buyer;
     //   const email = req.params.email;
