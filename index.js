@@ -29,9 +29,9 @@ async function run() {
     const jobsCollection = client.db("Online-Market").collection("jobs");
     const bidsCollection = client.db("Online-Market").collection("bids");
 
-    // All Jobs related Data----------->>
+    // Jobs related Data----------->>
 
-    // 2. Get all jobs from DB
+    // 2. Get (all) jobs from DB
     app.get("/jobs", async (req, res) => {
       const cursor = await jobsCollection.find().toArray();
       res.send(cursor);
@@ -80,6 +80,53 @@ async function run() {
       const result = await jobsCollection.deleteOne(query);
       res.send(result);
     });
+
+    // Find all jobs by category wise in Search page --->
+    app.get("/all-jobs", async (req, res) => {
+      const filter = req.query.filter || "";
+      const search = req.query.search || "";
+      const sort = req.query.sort || "";
+      let options = {};
+      if (sort) options = { sort: { deadline: sort === "asc" ? 1 : -1 } };
+      let query = {
+        job_title: {
+          $regex: search,
+          $options: "i",
+        },
+      };
+      if (filter) query.category = filter;
+      const result = await jobsCollection.find(query, options).toArray();
+      res.send(result);
+    });
+
+    // Help to chatGPT
+    // app.get("/all-jobs", async (req, res) => {
+    //   const filter = req.query.filter || "";
+    //   const search = req.query.search || "";
+
+    //   let query = {};
+
+    //   if (search) {
+    //     query.job_title = {
+    //       $regex: search,
+    //       $options: "i",
+    //     };
+    //   }
+
+    //   if (filter) {
+    //     query.category = filter;
+    //   }
+
+    //   try {
+    //     const result = await jobsCollection.find(query).toArray();
+    //     res.send(result);
+    //   } catch (error) {
+    //     console.error("Error fetching jobs:", error);
+    //     res
+    //       .status(500)
+    //       .send({ error: "An error occurred while fetching jobs." });
+    //   }
+    // });
 
     // All Bids related Data ----------------------->>
 
